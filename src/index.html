@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stable Fluids</title>
+    <script src="main.js"></script>
+    <script type="x-shader/x-vertex" id="vs">#version 300 es
+        const vec3[4] position = vec3[](
+            vec3(-1.0, -1.0, 0.0),
+            vec3(1.0, -1.0, 0.0),
+            vec3(-1.0, 1.0, 0.0),
+            vec3(1.0, 1.0, 0.0)
+        );
+        
+        const int[6] index = int[](
+            0, 1, 2,
+            3, 2, 1
+        );
+
+        void main(void) {
+            vec3 position = position[index[gl_VertexID]];
+            gl_Position = vec4(position, 1.0);
+        }
+    </script>
+    <script type="x-shader/x-fragment" id="initialize_velocity_fs">#version 300 es
+        precision highp float;
+
+        out vec2 o_velocity;
+
+        void main(void) {
+            o_velocity = vec2(0.0);
+        }
+    </script>
+    <script type="x-shader/x-fragment" id="initialize_density_fs">#version 300 es
+        precision highp float;
+
+        uniform sampler2D u_texture;
+        uniform vec2 u_resolution;
+
+        out vec4 o_density;
+
+        void main(void) {
+            vec2 textureSize = vec2(textureSize(u_texture, 0));
+            vec2 st = (2.0 * gl_FragCoord.xy - u_resolution) / min(u_resolution.x, u_resolution.y);
+
+            if (u_resolution.x > u_resolution.y) {
+                st.x *= textureSize.y / textureSize.x;
+            } else {
+                st.y *= textureSize.x / textureSize.y;
+            }
+
+            vec2 uv = st * 0.5 + 0.5;
+            uv = vec2(uv.x, 1.0 - uv.y);
+
+            vec3 density = vec3(0.0);
+            if (uv.x >= 0.0 && uv.x <= 1.0 && uv.y >= 0.0 && uv.y <= 1.0) {
+                density = texture(u_texture, uv).xyz;
+            }
+
+            o_density = vec4(density, 1.0);
+        }
+    </script>
+    <script type="x-shader/x-fragment" id="add_density_fs">#version 300 es
+        precision highp float;
+
+        uniform sampler2D u_density_texture;
+
+        out vec3 o_density;
+
+        void main(void) {
+            vec3 density = texelFetch(u_density_texture, ivec2(gl_FragCoord.xy), 0).xyz;
+            o_density = density;
+        }
+    </script>
+    <script type="x-shader/x-fragment" id="diffuse_density_fs">#version 300 es
+        precision highp float;
+
+        uniform sampler2D u_density_texture;
+        uniform float u_grid_space;
+        uniform float u_dt;
+        uniform float u_diffuse;
+
+        out vec3 o_density;
+
+        void main(void) {
+            ivec2 coord = ivec2(gl_FragCoord.xy);
+
+            float a = u_dt * u_diffuse / (u_grid_space * u_grid_space);
+
+            vec3 center = texelFetch(u_density_texture, coord, 0).xyz;
+            vec3 left = texelFetch(u_density_texture, coord + ivec2(-1, 0), 0).xyz;
+            vec3 right = texelFetch(u_density_texture, coord + ivec2(1, 0), 0).xyz;
+            vec3 down = texelFetch(u_density_texture, coord + ivec2(0, -1), 0).xyz;
+            vec3 up = texelFetch(u_density_texture, coord + ivec2(0, 1), 0).xyz;
+            o_density = (center + a * (left + right + down + up)) / (1.0 + 4.0 * a);
+        }
+    </script>
+    <script type="x-shader/x-fragment" id="advect_density_fs">#version 300 es
+        precision highp float;
+
+        uniform sampler2D u_density_texture;
+        uniform sampler2D u_velocity_texture;
+        uniform float u_grid_space;
+        uniform float u_dt;
+
+        out vec3 o_density;
+
+        void main(void) {
+            ivec2 coord = ivec2(gl_FragCoord.xy);
+
+            vec2 velocity = texelFetch(u_velocity_texture, coord, 0).xy;
+            vec2 prevPos = vec2(coord) * u_grid_space - u_dt * velocity;
+            vec2 prevCoord = prevPos / u_grid_space;
+
+            ivec2 i = ivec2(prevCoord);
+            vec2 f = fract(prevPos);
+
+            vec3 density00 = texelFetch(u_density_texture, i, 0).xyz;
+            vec3 density10 = texelFetch(u_density_texture, i + ivec2(1, 0), 0).xyz;
+            vec3 density01 = texelFetch(u_density_texture, i + ivec2(0, 1), 0).xyz;
+            vec3 density11 = texelFetch(u_density_texture, i + ivec2(1, 1), 0).xyz;
+            o_density = mix(mix(density00, density10, f.x), mix(density01, density11, f.x), f.y);
+        }
+    </script>
+    <script type="x-shader/x-fragment" id="add_external_force_fs">#version 300 es
+        precision highp float;
+
+        uniform sampler2D u_velocity_texture;
+        uniform float u_grid_space;
+        uniform float u_dt;
+        uniform float u_force_rad;
+        uniform vec2 u_force_center;
+        uniform vec2 u_force_direction;
+        uniform float u_force_intensity;
+
+        out vec2 o_velocity;
+
+        void main(void) {
+            vec2 velocity = texelFetch(u_velocity_texture, ivec2(gl_FragCoord.xy), 0).xy;
+            vec2 ex_force = smoothstep(u_force_rad, 0.0, length(u_force_center - gl_FragCoord.xy) * u_grid_space) * normalize(u_force_direction) * u_force_intensity;
+            o_velocity = velocity + u_dt * ex_force;
+        }
+    </script>
+    <script type="x-shader/x-fragment" id="diffuse_velocity_fs">#version 300 es
+        precision highp float;
+
+        uniform sampler2D u_velocity_texture;
+        uniform float u_grid_space;
+        uniform float u_dt;
+        uniform float u_diffuse;
+
+        out vec2 o_velocity;
+
+        void main(void) {
+            ivec2 coord = ivec2(gl_FragCoord.xy);
+
+            float a = u_dt * u_diffuse / (u_grid_space * u_grid_space);
+
+            vec2 center = texelFetch(u_velocity_texture, coord, 0).xy;
+            vec2 left = texelFetch(u_velocity_texture, coord + ivec2(-1, 0), 0).xy;
+            vec2 right = texelFetch(u_velocity_texture, coord + ivec2(1, 0), 0).xy;
+            vec2 down = texelFetch(u_velocity_texture, coord + ivec2(0, -1), 0).xy;
+            vec2 up = texelFetch(u_velocity_texture, coord + ivec2(0, 1), 0).xy;
+
+            o_velocity = (center + a * (left + right + down + up)) / (1.0 + 4.0 * a);
+        }
+    </script>
+    <script type="x-shader/x-fragment" id="advect_velocity_fs">#version 300 es
+        precision highp float;
+
+        uniform sampler2D u_velocity_texture;
+        uniform float u_grid_space;
+        uniform float u_dt;
+
+        out vec2 o_velocity;
+
+        void main(void) {
+            ivec2 coord = ivec2(gl_FragCoord.xy);
+
+            vec2 velocity = texelFetch(u_velocity_texture, coord, 0).xy;
+            vec2 prevPos = vec2(coord) * u_grid_space - u_dt * velocity;
+            vec2 prevCoord = prevPos / u_grid_space;
+
+            ivec2 i = ivec2(prevCoord);
+            vec2 f = fract(prevCoord);
+
+            vec2 velocity00 = texelFetch(u_velocity_texture, i, 0).xy;
+            vec2 velocity10 = texelFetch(u_velocity_texture, i + ivec2(1, 0), 0).xy;
+            vec2 velocity01 = texelFetch(u_velocity_texture, i + ivec2(0, 1), 0).xy;
+            vec2 velocity11 = texelFetch(u_velocity_texture, i + ivec2(1, 1), 0).xy;
+            o_velocity = mix(mix(velocity00, velocity10, f.x), mix(velocity01, velocity11, f.x), f.y);
+        }
+    </script>
+    <script type="x-shader/x-fragment" id="projection_step01_fs">#version 300 es
+        precision highp float;
+
+        uniform sampler2D u_velocity_texture;
+        uniform float u_grid_space;
+
+        out vec2 o_project;
+
+        void main(void) {
+            ivec2 coord = ivec2(gl_FragCoord.xy);
+
+            vec2 left = texelFetch(u_velocity_texture, coord + ivec2(-1, 0), 0).xy;
+            vec2 right = texelFetch(u_velocity_texture, coord + ivec2(1, 0), 0).xy;
+            vec2 down = texelFetch(u_velocity_texture, coord + ivec2(0, -1), 0).xy;
+            vec2 up = texelFetch(u_velocity_texture, coord + ivec2(0, 1), 0).xy;
+
+            float div = -0.5 * u_grid_space * (right.x - left.x + up.y - down.y);
+
+            o_project = vec2(0.0, div);
+        }
+    </script>
+    <script type="x-shader/x-fragment" id="projection_step02_fs">#version 300 es
+        precision highp float;
+
+        uniform sampler2D u_project_texture;
+
+        out vec2 o_project;
+
+        void main(void) {
+            ivec2 coord = ivec2(gl_FragCoord.xy);
+
+            float div = texelFetch(u_project_texture, coord, 0).y;
+
+            float left = texelFetch(u_project_texture, coord + ivec2(-1, 0), 0).x;
+            float right = texelFetch(u_project_texture, coord + ivec2(1, 0), 0).x;
+            float down = texelFetch(u_project_texture, coord + ivec2(0, -1), 0).x;
+            float up = texelFetch(u_project_texture, coord + ivec2(0, 1), 0).x;
+
+            o_project = vec2((div + left + right + down + up) / 4.0, div);
+        }
+    </script>
+    <script type="x-shader/x-fragment" id="projection_step03_fs">#version 300 es
+        precision highp float;
+
+        uniform sampler2D u_velocity_texture;
+        uniform sampler2D u_project_texture;
+        uniform float u_grid_space;
+
+        out vec2 o_velocity;
+
+        void main(void) {
+            ivec2 coord = ivec2(gl_FragCoord.xy);
+
+            vec2 velocity = texelFetch(u_velocity_texture, coord, 0).xy;
+
+            float left = texelFetch(u_project_texture, coord + ivec2(-1, 0), 0).x;
+            float right = texelFetch(u_project_texture, coord + ivec2(1, 0), 0).x;
+            float down = texelFetch(u_project_texture, coord + ivec2(0, -1), 0).x;
+            float up = texelFetch(u_project_texture, coord + ivec2(0, 1), 0).x;
+
+            o_velocity = velocity - 0.5 * vec2(right - left, up - down) / u_grid_space;
+        }
+    </script>
+    <script type="x-shader/x-fragment" id="render_density_fs">#version 300 es
+        precision highp float;
+
+        uniform sampler2D u_density_texture;
+
+        out vec4 fragColor;
+
+        void main(void) {
+            vec3 density = texelFetch(u_density_texture, ivec2(gl_FragCoord.xy), 0).xyz;
+            fragColor = vec4(density, 1.0);
+        }
+    </script>
+</head>
+<body style="margin: 0;">
+    <canvas id="canvas"></canvas>
+</body>
+</html>
