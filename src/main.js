@@ -27,6 +27,7 @@ window.onload = () => {
   let projectionStep01Program = createProgram('vs', 'projection_step01_fs');
   let projectionStep02Program = createProgram('vs', 'projection_step02_fs');
   let projectionStep03Program = createProgram('vs', 'projection_step03_fs');
+  let renderVelocityProgram = createProgram('vs', 'render_velocity_fs');
   let renderDensityProgram = createProgram('vs', 'render_density_fs');
 
   let initializeDensityUniforms = getUniformLocations(initializeDensityProgram, ['u_texture', 'u_resolution']);
@@ -39,6 +40,7 @@ window.onload = () => {
   let projectionStep01Uniforms = getUniformLocations(projectionStep01Program, ['u_velocity_texture', 'u_grid_space']);
   let projectionStep02Uniforms = getUniformLocations(projectionStep02Program, ['u_project_texture']);
   let projectionStep03Uniforms = getUniformLocations(projectionStep03Program, ['u_velocity_texture', 'u_project_texture', 'u_grid_space']);
+  let renderVelocityUniforms = getUniformLocations(renderVelocityProgram, ['u_velocity_texture']);
   let renderDensityUniforms = getUniformLocations(renderDensityProgram, ['u_density_texture']);
 
   let prevMousePosition = [0.0, 0.0];
@@ -71,7 +73,7 @@ window.onload = () => {
     time_step: 0.005
   };
 
-  let imageTexture = createImageTexture('./profile01.jpg');
+  let imageTexture = createImageTexture('./texture/lenna.png');
 
   render();
 
@@ -278,21 +280,35 @@ window.onload = () => {
       advectDensity();
     }
 
+    function renderVelocity() {
+      gl.useProgram(renderVelocityProgram);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, velocityFBObjR.texture);
+      gl.uniform1i(renderVelocityUniforms['u_velocity_texture'], 0);
+      gl.drawArrays(gl.TRIANGLES, 0, 6);
+    }
+
+    function renderDensity() {
+      gl.useProgram(renderDensityProgram);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, densityFBObjR.texture);
+      gl.uniform1i(renderDensityUniforms['u_density_texture'], 0);
+      gl.drawArrays(gl.TRIANGLES, 0, 6);
+    }
+
     initializeVelocity();
     initializeDensity();
 
     loop();
 
     function loop() {
+
+      gl.viewport(0.0, 0.0, canvas.width, canvas.height);
+
       updateVelocity();
       updateDensity();
 
-      // final render
-      gl.useProgram(renderDensityProgram);
-      gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, densityFBObjR.texture);
-      gl.uniform1i(renderDensityUniforms['u_density_texture'], 0);
-      gl.drawArrays(gl.TRIANGLES, 0, 6);
+      renderVelocity();
 
       mouseMoved = false;
 
