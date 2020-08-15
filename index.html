@@ -297,7 +297,7 @@
         out vec4 fragColor;
 
         void main(void) {
-            vec3 density = texelFetch(u_density_texture, ivec2(gl_FragCoord.xy), 0).xyz;
+            vec3 density = texelFetch(u_density_texture, ivec2(gl_FragCoord.xy), 0).xyx;
             fragColor = vec4(density, 1.0);
         }
     </script>
