@@ -425,29 +425,6 @@ window.onload = () => {
     return tex;
   }
 
-  function createImageTexture(source) {
-
-    let img = new Image();
-
-    let tex = gl.createTexture();
-
-    img.onload = function() {
-
-      gl.bindTexture(gl.TEXTURE_2D, tex);
-
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
-
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-
-      gl.bindTexture(gl.TEXTURE_2D, null);
-    }
-
-    img.src = source;
-    return tex;
-  }
-
   function createFramebuffer(width, height) {
 
     let framebuffer = gl.createFramebuffer();
