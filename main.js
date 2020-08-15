@@ -146,7 +146,7 @@ window.onload = () => {
       gl.uniform1f(diffuseVelocityUniforms['u_grid_space'], params.grid_space);
       gl.uniform1f(diffuseVelocityUniforms['u_dt'], params.time_step);
       gl.uniform1f(diffuseVelocityUniforms['u_diffuse'], params.diffuse);
-      for (let k = 0; k < 10; k++) {
+      for (let k = 0; k < 20; k++) {
         gl.bindFramebuffer(gl.FRAMEBUFFER, velocityFBObjW.framebuffer);
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, velocityFBObjR.texture);
@@ -184,7 +184,7 @@ window.onload = () => {
 
     function projectStep02() {
       gl.useProgram(projectionStep02Program);
-      for (let k = 0; k < 10; k++) {
+      for (let k = 0; k < 20; k++) {
         gl.bindFramebuffer(gl.FRAMEBUFFER, projectFBObjW.framebuffer);
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, projectFBObjR.texture);
