@@ -35,7 +35,6 @@
     <script type="x-shader/x-fragment" id="initialize_density_fs">#version 300 es
         precision highp float;
 
-        uniform sampler2D u_texture;
         uniform vec2 u_resolution;
 
         out vec3 o_density;
@@ -76,7 +75,9 @@
         void main(void) {
             ivec2 coord = ivec2(gl_FragCoord.xy);
 
-            float a = u_dt * u_diffuse * u_grid_space * u_grid_space;
+            float N = 1.0 / u_grid_space;
+
+            float a = u_dt * u_diffuse * N * N;
 
             vec3 center = texelFetch(u_density_texture, coord, 0).xyz;
             vec3 left = texelFetch(u_density_texture, coord + ivec2(-1, 0), 0).xyz;
@@ -147,7 +148,9 @@
         void main(void) {
             ivec2 coord = ivec2(gl_FragCoord.xy);
 
-            float a = u_dt * u_diffuse * u_grid_space * u_grid_space;
+            float N = 1.0 / u_grid_space;
+
+            float a = u_dt * u_diffuse * N * N;
 
             vec2 center = texelFetch(u_velocity_texture, coord, 0).xy;
             vec2 left = texelFetch(u_velocity_texture, coord + ivec2(-1, 0), 0).xy;
@@ -301,12 +304,80 @@
 </head>
 <body>
     <canvas id="canvas"></canvas>
+    <div id="container"></div>
+    <h1>Stable Fluids</h1>
+    <div id="parameter_container">
+      <div class="parameter"><div class="parameter_name">Render<input type="checkbox" id="render"/><span id="disp_render" class="value"></span></div></div><br>
+      <div class="parameter"><div class="parameter_name">Force Radius<span id="disp_force_rad" class="value"></span></div><input type="range" id="force_rad" min="0.005" max="0.05" value="0.01" step="0.001"/></div><br>
+      <div class="parameter"><div class="parameter_name">Force Intensity<span id="disp_force_intensity" class="value"></span></div><input type="range" id="force_intensity" min="10" max="500" value="100" step="1"/></div><br>
+      <div class="parameter"><div class="parameter_name">Diffuse<span id="disp_diffuse" class="value"></span></div><input type="range" id="diffuse" min="0.0" max="1.0" value="0.0" step="0.001"/></div><br>
+      <div class="parameter"><div class="parameter_name">Time Step<span id="disp_time_step" class="value"></span></div><input type="range" id="time_step" min="0.001" max="0.01" value="0.005" step="0.0001"/></div><br>
+    </div>
 </body>
 </html>
 
 <style>
-    body {
-        margin: 0;
-        overflow: hidden;
-    }
+#container {
+  padding-top: 50px;
+  position: fixed;
+}
+canvas {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  left: 0;
+  margin: auto;
+}
+#parameter_container {
+  background-color:rgba(20, 20, 20, 0.95);
+  border-radius: 3%;
+  padding: 2% 2.5%;
+  width: calc(10% + 120px);
+  font-family: 'Sen';
+  font-size: calc(0.5vw + 11.35px);
+  font-weight: 700;
+  color: white;
+  position: fixed;
+  display: block;
+  right: 50px;
+  transition: all 500ms;
+}
+.parameter_name {
+  width: 100%;
+  padding-bottom: 10px;
+}
+.parameter {
+  padding-top: 5px;
+}
+span {
+  float: right;
+}
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+  outline: none;
+  background: rgba(255, 255, 255, 1.0);
+  height: 3px;
+  width: calc(100%);
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance:none;
+  background:rgba(0.0, 0.0, 0.0, 0.0);
+  height: 15px;
+  width: 15px;
+  border: 2px solid #494949;
+  border-radius: 50%;
+}
+h1 {
+  font-family: 'Sen';
+  font-size: calc(1vw + 25px);
+  font-weight: 700;
+  left: 100px;
+  bottom: 10px;
+  position: fixed;
+  color: white;
+  transition: all 500ms;
+}
 </style>

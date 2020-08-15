@@ -68,19 +68,18 @@ window.onload = () => {
     mousePress = false;
   });
 
-  let params = {
-    grid_space: 0.001,
-    force_rad: 0.01,
-    force_intensity: 500.0,
-    diffuse: 0.1,
-    time_step: 0.005
-  };
-
-  let imageTexture = createImageTexture('./texture/lenna.png');
-
   render();
 
   function render() {
+
+    let params = {
+      render: document.getElementById('render').checked,
+      grid_space: 0.001,
+      force_rad: document.getElementById('force_rad').value,
+      force_intensity: document.getElementById('force_intensity').value,
+      diffuse: document.getElementById('diffuse').value,
+      time_step: document.getElementById('time_step').value
+    };
 
     // swapping functions
     let velocityFBObjR = createFramebuffer(canvas.width, canvas.height);
@@ -119,9 +118,6 @@ window.onload = () => {
     function initializeDensity() {
       gl.bindFramebuffer(gl.FRAMEBUFFER, densityFBObjW.framebuffer);
       gl.useProgram(initializeDensityProgram);
-      gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, imageTexture);
-      gl.uniform1i(initializeDensityUniforms['u_texture'], 0);
       gl.uniform2f(initializeDensityUniforms['u_resolution'], canvas.width, canvas.height);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -308,10 +304,36 @@ window.onload = () => {
 
       gl.viewport(0.0, 0.0, canvas.width, canvas.height);
 
+      params = {
+        render: document.getElementById('render').checked,
+        grid_space: 0.001,
+        force_rad: document.getElementById('force_rad').value,
+        force_intensity: document.getElementById('force_intensity').value,
+        diffuse: document.getElementById('diffuse').value,
+        time_step: document.getElementById('time_step').value
+      };
+
+      let e_render = document.getElementById('disp_render');
+      let e_force_rad = document.getElementById('disp_force_rad');
+      let e_force_intensity = document.getElementById('disp_force_intensity');
+      let e_diffuse = document.getElementById('disp_diffuse');
+      let e_time_step = document.getElementById('disp_time_step');
+      
+      e_force_rad.innerHTML = String(params.force_rad);
+      e_force_intensity.innerHTML = String(params.force_intensity);
+      e_diffuse.innerHTML = String(params.diffuse);
+      e_time_step.innerHTML = String(params.time_step);
+
       updateVelocity();
       updateDensity();
 
-      renderDensity();
+      if (params.render) {
+        e_render.innerHTML = 'Velocity';
+        renderVelocity();
+      } else {
+        e_render.innerHTML = 'Density';
+        renderDensity();
+      }
 
       mouseMoved = false;
 
