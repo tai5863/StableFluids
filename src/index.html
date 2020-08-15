@@ -38,27 +38,17 @@
         uniform sampler2D u_texture;
         uniform vec2 u_resolution;
 
-        out vec4 o_density;
-
+        out vec3 o_density;
+        
         void main(void) {
-            vec2 textureSize = vec2(textureSize(u_texture, 0));
             vec2 st = (2.0 * gl_FragCoord.xy - u_resolution) / min(u_resolution.x, u_resolution.y);
-
-            if (u_resolution.x > u_resolution.y) {
-                st.x *= textureSize.y / textureSize.x;
-            } else {
-                st.y *= textureSize.x / textureSize.y;
-            }
-
-            vec2 uv = st * 0.5 + 0.5;
-            uv = vec2(uv.x, 1.0 - uv.y);
-
             vec3 density = vec3(0.0);
-            if (uv.x >= 0.0 && uv.x <= 1.0 && uv.y >= 0.0 && uv.y <= 1.0) {
-                density = texture(u_texture, uv).xyz;
-            }
 
-            o_density = vec4(density, 1.0);
+            st = step(0.5, fract(st));
+
+            density = vec3(st, 0.0);
+
+            o_density = density;
         }
     </script>
     <script type="x-shader/x-fragment" id="add_density_fs">#version 300 es
@@ -86,7 +76,7 @@
         void main(void) {
             ivec2 coord = ivec2(gl_FragCoord.xy);
 
-            float a = u_dt * u_diffuse / (u_grid_space * u_grid_space);
+            float a = u_dt * u_diffuse * u_grid_space * u_grid_space;
 
             vec3 center = texelFetch(u_density_texture, coord, 0).xyz;
             vec3 left = texelFetch(u_density_texture, coord + ivec2(-1, 0), 0).xyz;
@@ -157,7 +147,7 @@
         void main(void) {
             ivec2 coord = ivec2(gl_FragCoord.xy);
 
-            float a = u_dt * u_diffuse / (u_grid_space * u_grid_space);
+            float a = u_dt * u_diffuse * u_grid_space * u_grid_space;
 
             vec2 center = texelFetch(u_velocity_texture, coord, 0).xy;
             vec2 left = texelFetch(u_velocity_texture, coord + ivec2(-1, 0), 0).xy;

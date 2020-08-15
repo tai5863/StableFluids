@@ -15,6 +15,8 @@ window.onload = () => {
   }
   addEventListener('resize', resizeCanvas);
   resizeCanvas();
+
+  gl.viewport(0.0, 0.0, canvas.width, canvas.height);
   
   let initializeDensityProgram = createProgram('vs', 'initialize_density_fs');
   let addDensitySourceProgram = createProgram('vs', 'add_density_fs');
@@ -52,7 +54,8 @@ window.onload = () => {
     prevMousePosition = mousePosition;
     mousePosition = [e.clientX, window.innerHeight - e.clientY];
     if (prevMousePosition != mousePosition) {
-      mouseDirection = mousePosition - prevMousePosition;
+      mouseDirection[0] = mousePosition[0] - prevMousePosition[0];
+      mouseDirection[1] = mousePosition[1] - prevMousePosition[1];
       mouseMoved = true;
     }
   });
@@ -68,7 +71,7 @@ window.onload = () => {
   let params = {
     grid_space: 0.001,
     force_rad: 0.01,
-    force_intensity: 100.0,
+    force_intensity: 500.0,
     diffuse: 0.1,
     time_step: 0.005
   };
@@ -308,7 +311,7 @@ window.onload = () => {
       updateVelocity();
       updateDensity();
 
-      renderVelocity();
+      renderDensity();
 
       mouseMoved = false;
 
