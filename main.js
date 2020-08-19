@@ -37,8 +37,8 @@ window.onload = () => {
   let diffuseDensityUniforms = getUniformLocations(diffuseDensityProgram, ['u_density_texture', 'u_grid_space', 'u_dt', 'u_diffuse']);
   let advectDensityUniforms = getUniformLocations(advectDensityProgram, ['u_density_texture', 'u_velocity_texture', 'u_grid_space', 'u_dt']);
   let addExternalForceUniforms = getUniformLocations(addExternalForceProgram, ['u_velocity_texture', 'u_grid_space', 'u_dt', 'u_force_rad', 'u_force_center', 'u_force_direction', 'u_force_intensity']);
-  let diffuseVelocityUniforms = getUniformLocations(diffuseVelocityProgram, ['u_velocity_texture', 'u_grid_space', 'u_dt', 'u_diffuse']);
-  let advectVelocityUniforms = getUniformLocations(advectVelocityProgram, ['u_velocity_texture', 'u_grid_space', 'u_dt']);
+  let diffuseVelocityUniforms = getUniformLocations(diffuseVelocityProgram, ['u_velocity_texture', 'u_grid_space', 'u_dt', 'u_diffuse', 'u_resolution']);
+  let advectVelocityUniforms = getUniformLocations(advectVelocityProgram, ['u_velocity_texture', 'u_grid_space', 'u_dt', 'u_resolution']);
   let projectionStep01Uniforms = getUniformLocations(projectionStep01Program, ['u_velocity_texture', 'u_grid_space']);
   let projectionStep02Uniforms = getUniformLocations(projectionStep02Program, ['u_project_texture']);
   let projectionStep03Uniforms = getUniformLocations(projectionStep03Program, ['u_velocity_texture', 'u_project_texture', 'u_grid_space']);
@@ -54,8 +54,8 @@ window.onload = () => {
     prevMousePosition = mousePosition;
     mousePosition = [e.clientX, window.innerHeight - e.clientY];
     if (prevMousePosition != mousePosition) {
-      mouseDirection[0] = mousePosition[0] - prevMousePosition[0];
-      mouseDirection[1] = mousePosition[1] - prevMousePosition[1];
+      mouseDirection[0] = 3.0 * (mousePosition[0] - prevMousePosition[0]);
+      mouseDirection[1] = 3.0 * (mousePosition[1] - prevMousePosition[1]);
       mouseMoved = true;
     }
   });
@@ -146,6 +146,7 @@ window.onload = () => {
       gl.uniform1f(diffuseVelocityUniforms['u_grid_space'], params.grid_space);
       gl.uniform1f(diffuseVelocityUniforms['u_dt'], params.time_step);
       gl.uniform1f(diffuseVelocityUniforms['u_diffuse'], params.diffuse);
+      gl.uniform2f(diffuseVelocityUniforms['u_resolution'], canvas.width, canvas.height);
       for (let k = 0; k < 20; k++) {
         gl.bindFramebuffer(gl.FRAMEBUFFER, velocityFBObjW.framebuffer);
         gl.activeTexture(gl.TEXTURE0);
@@ -165,6 +166,7 @@ window.onload = () => {
       gl.uniform1i(advectVelocityUniforms['u_velocity_texture'], 0);
       gl.uniform1f(advectVelocityUniforms['u_grid_space'], params.grid_space);
       gl.uniform1f(advectVelocityUniforms['u_dt'], params.time_step);
+      gl.uniform2f(advectVelocityUniforms['u_resolution'], canvas.width, canvas.height);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       swapVelocityFBObj();

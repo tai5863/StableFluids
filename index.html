@@ -142,21 +142,45 @@
         uniform float u_grid_space;
         uniform float u_dt;
         uniform float u_diffuse;
+        uniform vec2 u_resolution;
 
         out vec2 o_velocity;
 
         void main(void) {
             ivec2 coord = ivec2(gl_FragCoord.xy);
+            ivec2 coordMax = ivec2(u_resolution);
 
             float N = 1.0 / u_grid_space;
 
             float a = u_dt * u_diffuse * N * N;
 
+            ivec2 vL = coord + ivec2(-1, 0);
+            ivec2 vR = coord + ivec2(1, 0);
+            ivec2 vD = coord + ivec2(0, -1);
+            ivec2 vU = coord + ivec2(0, 1);
+
             vec2 center = texelFetch(u_velocity_texture, coord, 0).xy;
-            vec2 left = texelFetch(u_velocity_texture, coord + ivec2(-1, 0), 0).xy;
-            vec2 right = texelFetch(u_velocity_texture, coord + ivec2(1, 0), 0).xy;
-            vec2 down = texelFetch(u_velocity_texture, coord + ivec2(0, -1), 0).xy;
-            vec2 up = texelFetch(u_velocity_texture, coord + ivec2(0, 1), 0).xy;
+            
+            vec2 left = texelFetch(u_velocity_texture, vL, 0).xy;
+            vec2 right = texelFetch(u_velocity_texture, vR, 0).xy;
+            vec2 down = texelFetch(u_velocity_texture, vD, 0).xy;
+            vec2 up = texelFetch(u_velocity_texture, vU, 0).xy;
+
+            if (vL.x < 0) {
+              left.x = -center.x;
+            }
+
+            if (vR.x > coordMax.x) {
+              right.x = -center.x;
+            }
+
+            if (vD.y < 0) {
+              down.y = -center.y;
+            }
+
+            if (vU.y > coordMax.y) {
+              up.y = -center.y;
+            }
 
             o_velocity = (center + a * (left + right + down + up)) / (1.0 + 4.0 * a);
         }
@@ -167,11 +191,13 @@
         uniform sampler2D u_velocity_texture;
         uniform float u_grid_space;
         uniform float u_dt;
+        uniform vec2 u_resolution;
 
         out vec2 o_velocity;
 
         void main(void) {
             ivec2 coord = ivec2(gl_FragCoord.xy);
+            ivec2 coordMax = ivec2(u_resolution);
 
             vec2 velocity = texelFetch(u_velocity_texture, coord, 0).xy;
             vec2 prevPos = vec2(coord) * u_grid_space - u_dt * velocity;
@@ -180,10 +206,26 @@
             ivec2 i = ivec2(prevCoord);
             vec2 f = fract(prevCoord);
 
+            ivec2 vR = i + ivec2(1, 0);
+            ivec2 vU = i + ivec2(0, 1);
+            ivec2 vRU = i + ivec2(1, 1);
+
             vec2 velocity00 = texelFetch(u_velocity_texture, i, 0).xy;
-            vec2 velocity10 = texelFetch(u_velocity_texture, i + ivec2(1, 0), 0).xy;
-            vec2 velocity01 = texelFetch(u_velocity_texture, i + ivec2(0, 1), 0).xy;
-            vec2 velocity11 = texelFetch(u_velocity_texture, i + ivec2(1, 1), 0).xy;
+            vec2 velocity10 = texelFetch(u_velocity_texture, vR, 0).xy;
+            vec2 velocity01 = texelFetch(u_velocity_texture, vU, 0).xy;
+            vec2 velocity11 = texelFetch(u_velocity_texture, vRU, 0).xy;
+
+            if (vR.x > coordMax.x) {
+              velocity10.x = -velocity00.x;
+            } 
+
+            if (vU.y > coordMax.y) {
+              velocity01.y = -velocity00.y;
+            }
+
+            if (vRU.x > coordMax.x && vRU.y > coordMax.y) {
+              velocity11 = -velocity00;
+            }
 
             o_velocity = mix(mix(velocity00, velocity10, f.x), mix(velocity01, velocity11, f.x), f.y);
         }
@@ -235,18 +277,27 @@
         uniform sampler2D u_velocity_texture;
         uniform sampler2D u_project_texture;
         uniform float u_grid_space;
+        uniform vec2 u_resolution;
 
         out vec2 o_velocity;
 
         void main(void) {
             ivec2 coord = ivec2(gl_FragCoord.xy);
+            ivec2 coordMax = ivec2(u_resolution);
+
+            ivec2 vL = coord + ivec2(-1, 0);
+            ivec2 vR = coord + ivec2(1, 0);
+            ivec2 vD = coord + ivec2(0, -1);
+            ivec2 vU = coord + ivec2(0, 1);
 
             vec2 velocity = texelFetch(u_velocity_texture, coord, 0).xy;
 
-            float left = texelFetch(u_project_texture, coord + ivec2(-1, 0), 0).x;
-            float right = texelFetch(u_project_texture, coord + ivec2(1, 0), 0).x;
-            float down = texelFetch(u_project_texture, coord + ivec2(0, -1), 0).x;
-            float up = texelFetch(u_project_texture, coord + ivec2(0, 1), 0).x;
+            float center = texelFetch(u_project_texture, coord, 0).x;
+
+            float left = texelFetch(u_project_texture, vL, 0).x;
+            float right = texelFetch(u_project_texture, vR, 0).x;
+            float down = texelFetch(u_project_texture, vD, 0).x;
+            float up = texelFetch(u_project_texture, vU, 0).x;
 
             o_velocity = velocity - 0.5 * vec2(right - left, up - down) / u_grid_space;
         }
