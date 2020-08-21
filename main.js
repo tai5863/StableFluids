@@ -52,10 +52,10 @@ window.onload = () => {
 
   window.addEventListener('mousemove', (e) => {
     prevMousePosition = mousePosition;
-    mousePosition = [e.clientX, window.innerHeight - e.clientY];
+    mousePosition = [e.clientX, canvas.height - e.clientY];
     if (prevMousePosition != mousePosition) {
-      mouseDirection[0] = 3.0 * (mousePosition[0] - prevMousePosition[0]);
-      mouseDirection[1] = 3.0 * (mousePosition[1] - prevMousePosition[1]);
+      mouseDirection[0] = mousePosition[0] - prevMousePosition[0];
+      mouseDirection[1] = mousePosition[1] - prevMousePosition[1];
       mouseMoved = true;
     }
   });
