@@ -9,7 +9,11 @@ window.onload = () => {
     return;
   }
 
-  let resizeCanvas = () => {
+  const stats = new Stats();
+  const container = document.getElementById('container');
+  container.appendChild(stats.domElement);
+
+  const resizeCanvas = () => {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
   }
@@ -61,10 +65,10 @@ window.onload = () => {
   });
 
   let mousePress = false;
-  window.addEventListener('mousedown', (e) => {
+  window.addEventListener('mousedown', () => {
     mousePress = true;
   });
-  window.addEventListener('mouseup', (e) => {
+  window.addEventListener('mouseup', () => {
     mousePress = false;
   });
 
@@ -147,7 +151,7 @@ window.onload = () => {
       gl.uniform1f(diffuseVelocityUniforms['u_dt'], params.time_step);
       gl.uniform1f(diffuseVelocityUniforms['u_diffuse'], params.diffuse);
       gl.uniform2f(diffuseVelocityUniforms['u_resolution'], canvas.width, canvas.height);
-      for (let k = 0; k < 20; k++) {
+      for (let k = 0; k < 10; k++) {
         gl.bindFramebuffer(gl.FRAMEBUFFER, velocityFBObjW.framebuffer);
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, velocityFBObjR.texture);
@@ -186,7 +190,7 @@ window.onload = () => {
 
     function projectStep02() {
       gl.useProgram(projectionStep02Program);
-      for (let k = 0; k < 20; k++) {
+      for (let k = 0; k < 10; k++) {
         gl.bindFramebuffer(gl.FRAMEBUFFER, projectFBObjW.framebuffer);
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, projectFBObjR.texture);
@@ -303,6 +307,8 @@ window.onload = () => {
     loop();
 
     function loop() {
+
+      stats.update();
 
       gl.viewport(0.0, 0.0, canvas.width, canvas.height);
 
